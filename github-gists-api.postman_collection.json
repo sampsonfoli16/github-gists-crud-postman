@@ -1,0 +1,251 @@
+{
+  "info": {
+    "_postman_id": "8f14a3d2-6b91-4e77-9c3a-2d5f8a1b6c40",
+    "name": "GitHub Gists API - CRUD Assignment",
+    "description": "Formative 1: Exploring and Testing APIs with Postman. Full CRUD against GitHub's Gists API using Personal Access Token authentication. Run requests in order: 0 (verify auth) -> 1 (list) -> 2 (create) -> 3 (get one) -> 4 (update) -> 5 (delete). Request 2 automatically saves the new gist's id into {{gist_id}} so requests 3-5 can use it.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level check: make sure a token has been set before any",
+          "// request runs. GitHub uses long-lived Personal Access Tokens rather",
+          "// than a login endpoint that hands one back, so there's nothing to",
+          "// auto-fetch here - instead we just guard against running with it empty.",
+          "if (!pm.environment.get(\"auth_token\")) {",
+          "    console.warn(\"auth_token is empty - paste your GitHub PAT into the environment first.\");",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0 - Verify Authentication",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/user",
+          "host": ["{{base_url}}"],
+          "path": ["user"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 (token is valid)\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has a GitHub username\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.login).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 - List My Gists (GET all)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/gists",
+          "host": ["{{base_url}}"],
+          "path": ["gists"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is an array\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Create Gist (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"{{gist_description}}\",\n  \"public\": true,\n  \"files\": {\n    \"postman-test.txt\": {\n      \"content\": \"Created via Postman for the Web Infra CRUD assignment.\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/gists",
+          "host": ["{{base_url}}"],
+          "path": ["gists"]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Give each run a unique description so re-running the collection",
+              "// doesn't just pile up identical-looking gists.",
+              "pm.environment.set(\"gist_description\", \"Postman test gist - \" + new Date().toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 201 (Created)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Response has an ID\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.id).to.exist;",
+              "    // Automatically save the new gist's id - same idea as the",
+              "    // assignment's example of auto-saving a login token, just",
+              "    // applied to a resource id since GitHub has no login step.",
+              "    pm.environment.set(\"gist_id\", jsonData.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Get Single Gist (GET by id)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/gists/{{gist_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["gists", "{{gist_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Returned gist matches the one we created\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.id).to.eql(pm.environment.get(\"gist_id\"));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Update Gist (PATCH)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Updated via Postman - CRUD assignment\",\n  \"files\": {\n    \"postman-test.txt\": {\n      \"content\": \"This content was updated by the PATCH request.\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/gists/{{gist_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["gists", "{{gist_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Description was updated\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.description).to.eql(\"Updated via Postman - CRUD assignment\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Delete Gist (DELETE)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{auth_token}}" },
+          { "key": "Accept", "value": "application/vnd.github+json" },
+          { "key": "X-GitHub-Api-Version", "value": "2022-11-28" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/gists/{{gist_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["gists", "{{gist_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 204 (No Content - deleted)\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
